@@ -1,0 +1,16 @@
+{
+  "config": {
+    "models_per_task": 300,
+    "tasks": [
+      "binary_classification_synthetic",
+      "binary_random_labels"
+    ],
+    "epochs": 100,
+    "batch_size": 10,
+    "expected_dimension": 216.0,
+    "samples_per_dimension": 1.3888888888888888,
+    "started": "2026-01-17T19:59:51.279641"
+  },
+  "task_dimensions": {
+    "binary_classification_synthetic": {
+      "dim_95": 
