@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Replicate the ViT Universal Subspace Analysis
+Replicate the ViT Universal Subspace Analysis (Fast Version)
 
-Download diverse ViT models from HuggingFace and check if they
-share a low-dimensional subspace in weight space.
+Uses Gram matrix trick: for n_models << n_params, computing the n x n
+Gram matrix is much faster than full SVD on the weight matrix.
 """
 import numpy as np
 import torch
@@ -11,8 +11,8 @@ import sys
 import os
 import json
 from datetime import datetime
-from huggingface_hub import HfApi, list_models
-from transformers import ViTModel, ViTForImageClassification
+from huggingface_hub import list_models
+from transformers import ViTForImageClassification
 import gc
 
 def print_progress(current, total, prefix='', suffix=''):
@@ -20,279 +20,239 @@ def print_progress(current, total, prefix='', suffix=''):
     progress = current / total
     filled = int(bar_width * progress)
     bar = '█' * filled + '░' * (bar_width - filled)
-    sys.stdout.write(f'\r{prefix} [{bar}] {progress*100:.1f}% ({current}/{total}) {suffix}')
+    sys.stdout.write(f'\r{prefix} [{bar}] {progress*100:.1f}% ({current}/{total}) {suffix}    ')
     sys.stdout.flush()
 
 
-def search_diverse_vit_models(max_models=100):
-    """Search HuggingFace for diverse ViT models."""
-    print("Searching HuggingFace for diverse ViT models...")
-
-    api = HfApi()
-
-    # Search for ViT models with different queries to get diversity
-    search_queries = [
-        "vit-base-patch16-224",
-        "vit image classification medical",
-        "vit image classification satellite",
-        "vit image classification food",
-        "vit image classification animals",
-        "vit image classification plants",
-        "vit image classification",
-        "vision-transformer",
-        "google/vit",
-    ]
-
-    all_models = set()
-
-    for query in search_queries:
-        try:
-            models = list(list_models(
-                search=query,
-                limit=50,
-                sort="downloads",
-                direction=-1
-            ))
-            for m in models:
-                # Filter for ViT models that are reasonable size
-                if 'vit' in m.id.lower() and m.id not in all_models:
-                    all_models.add(m.id)
-        except Exception as e:
-            print(f"  Warning: Search '{query}' failed: {e}")
-
-    print(f"Found {len(all_models)} unique ViT models")
-    return list(all_models)[:max_models]
+def search_vit_models(max_models=100):
+    """Search HuggingFace for ViT models."""
+    print("Searching HuggingFace for ViT models...")
+    models = list(list_models(search="vit-base-patch16-224", limit=max_models, sort="downloads", direction=-1))
+    vit_models = [m.id for m in models if 'vit' in m.id.lower()]
+    print(f"Found {len(vit_models)} ViT models")
+    return vit_models
 
 
-def get_model_weights(model_name, target_params=86_000_000):
-    """
-    Download a ViT model and extract its weights as a flat vector.
-    Returns None if model is wrong size or fails to load.
-    """
+def get_model_weights(model_name):
+    """Download a ViT model and extract weights. Returns None on failure."""
     try:
-        # Try loading as ViTForImageClassification first
         model = ViTForImageClassification.from_pretrained(
             model_name,
             torch_dtype=torch.float32,
-            ignore_mismatched_sizes=True
+            ignore_mismatched_sizes=True,
+            low_cpu_mem_usage=True
         )
 
-        # Count parameters
-        n_params = sum(p.numel() for p in model.parameters())
-
-        # We want models of similar size (within 50% of target)
-        if n_params < target_params * 0.5 or n_params > target_params * 1.5:
-            del model
-            gc.collect()
-            return None, None, "wrong size"
-
-        # Extract weights as flat vector (only from vit encoder, not classifier head)
+        n_params = 0
         weights = []
         for name, param in model.named_parameters():
             if 'classifier' not in name and 'pooler' not in name:
+                n_params += param.numel()
                 weights.append(param.data.cpu().numpy().flatten())
 
-        weight_vector = np.concatenate(weights)
+        weight_vector = np.concatenate(weights).astype(np.float32)
 
-        del model
+        del model, weights
         gc.collect()
+        torch.cuda.empty_cache() if torch.cuda.is_available() else None
 
         return weight_vector, n_params, None
 
     except Exception as e:
         gc.collect()
-        return None, None, str(e)
-
-
-def analyze_weight_matrix(weights_matrix):
-    """Compute spectral metrics for the weight matrix."""
-    n_models, n_params = weights_matrix.shape
-
-    print(f"\nAnalyzing {n_models} models with {n_params:,} parameters each...")
-
-    # Center the data
-    weights_centered = weights_matrix - weights_matrix.mean(axis=0)
-
-    # Compute SVD (more efficient than PCA for this shape)
-    print("  Computing SVD...")
-    U, S, Vt = np.linalg.svd(weights_centered, full_matrices=False)
-
-    # Variance explained
-    var_explained = S**2 / np.sum(S**2)
-    cumsum = np.cumsum(var_explained)
-
-    # Key metrics
-    k_50 = np.argmax(cumsum >= 0.50) + 1
-    k_90 = np.argmax(cumsum >= 0.90) + 1
-    k_95 = np.argmax(cumsum >= 0.95) + 1
-    k_99 = np.argmax(cumsum >= 0.99) + 1
-
-    # Effective dimension
-    effective_dim = (np.sum(var_explained) ** 2) / np.sum(var_explained ** 2)
-
-    # Spectral ratios
-    spectral_ratio_10 = S[0] / S[min(9, len(S)-1)]
-    spectral_ratio_20 = S[0] / S[min(19, len(S)-1)] if len(S) > 19 else None
-
-    return {
-        'n_models': n_models,
-        'n_params': n_params,
-        'k_50': int(k_50),
-        'k_90': int(k_90),
-        'k_95': int(k_95),
-        'k_99': int(k_99),
-        'effective_dim': float(effective_dim),
-        'spectral_ratio_10': float(spectral_ratio_10),
-        'spectral_ratio_20': float(spectral_ratio_20) if spectral_ratio_20 else None,
-        'top_20_variance': [float(v) for v in var_explained[:20]],
-        'singular_values_normalized': [float(s/S[0]) for s in S[:50]]
-    }
+        return None, None, str(e)[:50]
 
 
 def main():
     print("=" * 70)
-    print(" REPLICATING VIT UNIVERSAL SUBSPACE ANALYSIS")
+    print(" REPLICATING VIT UNIVERSAL SUBSPACE ANALYSIS (v4 - fast)")
     print("=" * 70)
 
     save_dir = 'experiments/current/vit_subspace_replication'
     os.makedirs(save_dir, exist_ok=True)
 
-    # Parameters
-    target_models = 50  # Start with 50, can increase
-    target_params = 86_000_000  # ViT-Base size
+    target_models = 20
+    model_candidates = search_vit_models(max_models=80)
 
-    # Search for models
-    model_candidates = search_diverse_vit_models(max_models=200)
+    print(f"\nAttempting to find {target_models} ViT-Base models...")
 
-    print(f"\nWill attempt to download up to {target_models} ViT models...")
-    print(f"Target parameter count: ~{target_params:,} (ViT-Base)")
-
-    # Download models and extract weights
-    weights_list = []
-    model_info = []
-    failed = []
+    # First pass: find valid models
+    print("\n--- Pass 1: Finding valid ViT-Base models ---")
+    valid_models = []
+    valid_dims = []
 
     for i, model_name in enumerate(model_candidates):
-        if len(weights_list) >= target_models:
+        if len(valid_models) >= target_models:
             break
 
-        print_progress(i + 1, len(model_candidates),
-                      prefix=f'Downloading ({len(weights_list)}/{target_models} valid)',
-                      suffix=f'  {model_name[:40]}...')
+        print_progress(len(valid_models), target_models,
+                      prefix='Finding', suffix=f'{model_name[:40]}...')
 
-        weights, n_params, error = get_model_weights(model_name, target_params)
+        weights, n_params, error = get_model_weights(model_name)
 
         if weights is not None:
-            weights_list.append(weights)
-            model_info.append({
-                'name': model_name,
-                'n_params': int(n_params),
-                'weight_dim': len(weights)
-            })
-        else:
-            failed.append((model_name, error))
+            if 80_000_000 < n_params < 90_000_000:
+                valid_models.append(model_name)
+                valid_dims.append(len(weights))
+                print(f"\n  ✓ {model_name}: {n_params:,} params, {len(weights):,} weights")
 
-    print(f"\n\nSuccessfully loaded {len(weights_list)} models")
-    print(f"Failed: {len(failed)} models")
+        del weights
+        gc.collect()
 
-    if len(weights_list) < 10:
-        print("ERROR: Not enough models loaded for meaningful analysis")
+    print(f"\n\nFound {len(valid_models)} valid ViT-Base models")
+
+    if len(valid_models) < 5:
+        print("ERROR: Not enough models found")
         return
 
-    # Check if all weight vectors are same size
-    sizes = [len(w) for w in weights_list]
-    if len(set(sizes)) > 1:
-        # Filter to most common size
-        from collections import Counter
-        most_common_size = Counter(sizes).most_common(1)[0][0]
-        print(f"\nFiltering to models with {most_common_size:,} parameters...")
+    # Filter to most common dimension
+    from collections import Counter
+    dim_counts = Counter(valid_dims)
+    target_dim = dim_counts.most_common(1)[0][0]
+    print(f"Target dimension: {target_dim:,}")
 
-        filtered_weights = []
-        filtered_info = []
-        for w, info in zip(weights_list, model_info):
-            if len(w) == most_common_size:
-                filtered_weights.append(w)
-                filtered_info.append(info)
+    final_models = [m for m, d in zip(valid_models, valid_dims) if d == target_dim]
+    print(f"Models with matching dimensions: {len(final_models)}")
 
-        weights_list = filtered_weights
-        model_info = filtered_info
-        print(f"Kept {len(weights_list)} models with matching dimensions")
-
-    if len(weights_list) < 10:
+    if len(final_models) < 5:
         print("ERROR: Not enough models with matching dimensions")
         return
 
-    # Stack into matrix
-    weights_matrix = np.array(weights_list)
-    print(f"\nWeight matrix shape: {weights_matrix.shape}")
+    n_models = len(final_models)
+    n_params = target_dim
 
-    # Analyze
-    results = analyze_weight_matrix(weights_matrix)
-    results['models'] = model_info
-    results['timestamp'] = datetime.now().isoformat()
+    # Second pass: compute Gram matrix incrementally
+    print(f"\n--- Pass 2: Computing {n_models}x{n_models} Gram matrix ---")
 
-    # Save results
+    # Load all weights and compute mean
+    print("Loading weights and computing mean...")
+    weights_sum = np.zeros(n_params, dtype=np.float64)
+    model_info = []
+
+    for i, model_name in enumerate(final_models):
+        print_progress(i + 1, n_models, prefix='Computing mean')
+        weights, n_p, _ = get_model_weights(model_name)
+        if weights is not None and len(weights) == n_params:
+            weights_sum += weights.astype(np.float64)
+            model_info.append({'name': model_name, 'n_params': int(n_p)})
+        del weights
+        gc.collect()
+
+    mean = (weights_sum / n_models).astype(np.float32)
+    del weights_sum
+    gc.collect()
+
+    # Compute Gram matrix G[i,j] = (w_i - mean) . (w_j - mean)
+    print("\n\nComputing centered Gram matrix...")
+    G = np.zeros((n_models, n_models), dtype=np.float64)
+
+    # Store centered weights temporarily (one at a time for diagonal, pairs for off-diagonal)
+    centered_weights = []
+    for i, model_name in enumerate(final_models):
+        print_progress(i + 1, n_models, prefix='Loading centered weights')
+        weights, _, _ = get_model_weights(model_name)
+        if weights is not None:
+            centered = (weights - mean).astype(np.float64)
+            centered_weights.append(centered)
+        del weights
+        gc.collect()
+
+    print("\n\nComputing dot products...")
+    for i in range(n_models):
+        print_progress(i + 1, n_models, prefix='Gram matrix')
+        for j in range(i, n_models):
+            G[i, j] = np.dot(centered_weights[i], centered_weights[j])
+            G[j, i] = G[i, j]
+
+    del centered_weights
+    gc.collect()
+
+    # Eigendecomposition of Gram matrix
+    print("\n\nComputing eigenvalues...")
+    eigenvalues, eigenvectors = np.linalg.eigh(G)
+    eigenvalues = eigenvalues[::-1]  # Sort descending
+    eigenvalues = np.maximum(eigenvalues, 0)  # Numerical stability
+
+    # Singular values are sqrt of eigenvalues of Gram matrix
+    S = np.sqrt(eigenvalues)
+
+    # Variance explained
+    var_explained = eigenvalues / np.sum(eigenvalues)
+    cumsum = np.cumsum(var_explained)
+
+    # Metrics
+    k_50 = int(np.argmax(cumsum >= 0.50) + 1)
+    k_90 = int(np.argmax(cumsum >= 0.90) + 1)
+    k_95 = int(np.argmax(cumsum >= 0.95) + 1)
+    k_99 = int(np.argmax(cumsum >= 0.99) + 1)
+    effective_dim = float((np.sum(var_explained) ** 2) / np.sum(var_explained ** 2))
+    spectral_ratio_10 = float(S[0] / S[min(9, len(S)-1)]) if S[min(9, len(S)-1)] > 0 else float('inf')
+
+    results = {
+        'n_models': n_models,
+        'n_params': int(n_params),
+        'k_50': k_50,
+        'k_90': k_90,
+        'k_95': k_95,
+        'k_99': k_99,
+        'effective_dim': effective_dim,
+        'spectral_ratio_10': spectral_ratio_10,
+        'top_20_variance': [float(v) for v in var_explained[:20]],
+        'singular_values': [float(s) for s in S[:20]],
+        'models': model_info,
+        'timestamp': datetime.now().isoformat()
+    }
+
+    # Save
     with open(f'{save_dir}/results.json', 'w') as f:
         json.dump(results, f, indent=2)
 
-    # Save weights for further analysis
-    np.save(f'{save_dir}/weights_matrix.npy', weights_matrix)
-
-    # Print summary
+    # Print results
     print("\n" + "=" * 70)
     print(" RESULTS")
     print("=" * 70)
 
-    print(f"\nModels analyzed: {results['n_models']}")
-    print(f"Parameters per model: {results['n_params']:,}")
+    print(f"\nModels analyzed: {n_models}")
+    print(f"Parameters per model: {n_params:,}")
 
     print(f"\nDimensionality:")
-    print(f"  k for 50% variance: {results['k_50']}")
-    print(f"  k for 90% variance: {results['k_90']}")
-    print(f"  k for 95% variance: {results['k_95']}")
-    print(f"  k for 99% variance: {results['k_99']}")
-    print(f"  Effective dimension: {results['effective_dim']:.1f}")
-
-    print(f"\nSpectral decay:")
-    print(f"  σ₁/σ₁₀: {results['spectral_ratio_10']:.2f}")
-    if results['spectral_ratio_20']:
-        print(f"  σ₁/σ₂₀: {results['spectral_ratio_20']:.2f}")
+    print(f"  k for 50% variance: {k_50} / {n_models} ({k_50/n_models*100:.1f}%)")
+    print(f"  k for 90% variance: {k_90} / {n_models} ({k_90/n_models*100:.1f}%)")
+    print(f"  k for 95% variance: {k_95} / {n_models} ({k_95/n_models*100:.1f}%)")
+    print(f"  k for 99% variance: {k_99} / {n_models} ({k_99/n_models*100:.1f}%)")
+    print(f"  Effective dimension: {effective_dim:.1f}")
+    print(f"  Spectral ratio σ₁/σ₁₀: {spectral_ratio_10:.2f}")
 
     print(f"\nTop 10 variance explained:")
-    cumsum = 0
-    for i, v in enumerate(results['top_20_variance'][:10]):
-        cumsum += v
-        bar = '█' * int(v * 200)
-        print(f"  PC{i+1:2d}: {v:.4f} (cum: {cumsum:.4f}) {bar}")
+    cumsum_val = 0
+    for i, v in enumerate(var_explained[:10]):
+        cumsum_val += v
+        bar = '█' * int(v * 100)
+        print(f"  PC{i+1:2d}: {v:.4f} (cum: {cumsum_val:.4f}) {bar}")
 
     # Interpretation
     print("\n" + "=" * 70)
     print(" INTERPRETATION")
     print("=" * 70)
 
-    n_models = results['n_models']
-    k_95 = results['k_95']
-    ratio = results['spectral_ratio_10']
-
-    if k_95 < n_models * 0.5:
-        print(f"\n✓ LOW-DIMENSIONAL STRUCTURE DETECTED")
-        print(f"  k_95 = {k_95} is much less than n_models = {n_models}")
-        print(f"  This SUPPORTS the universal subspace hypothesis")
-    elif k_95 < n_models * 0.8:
+    if k_95 < n_models * 0.3:
+        print(f"\n✓ STRONG LOW-DIMENSIONAL STRUCTURE")
+        print(f"  k_95 = {k_95} << n_models = {n_models}")
+        print(f"  SUPPORTS universal subspace hypothesis")
+    elif k_95 < n_models * 0.6:
         print(f"\n~ MODERATE STRUCTURE")
         print(f"  k_95 = {k_95} vs n_models = {n_models}")
-        print(f"  Some compression but not dramatic")
     else:
-        print(f"\n✗ NO LOW-DIMENSIONAL STRUCTURE")
+        print(f"\n✗ WEAK/NO LOW-DIMENSIONAL STRUCTURE")
         print(f"  k_95 = {k_95} ≈ n_models = {n_models}")
-        print(f"  Models appear to be nearly independent points")
+        print(f"  Does NOT support universal subspace hypothesis")
 
-    if ratio > 3:
-        print(f"\n✓ SHARP SPECTRAL DECAY (σ₁/σ₁₀ = {ratio:.2f})")
-    elif ratio > 1.5:
-        print(f"\n~ MODERATE SPECTRAL DECAY (σ₁/σ₁₀ = {ratio:.2f})")
+    if spectral_ratio_10 > 5:
+        print(f"\n✓ SHARP spectral decay (σ₁/σ₁₀ = {spectral_ratio_10:.1f})")
+    elif spectral_ratio_10 > 2:
+        print(f"\n~ MODERATE spectral decay (σ₁/σ₁₀ = {spectral_ratio_10:.1f})")
     else:
-        print(f"\n✗ FLAT SPECTRAL DECAY (σ₁/σ₁₀ = {ratio:.2f})")
+        print(f"\n✗ FLAT spectral decay (σ₁/σ₁₀ = {spectral_ratio_10:.1f})")
 
     print(f"\nResults saved to: {save_dir}/")
 

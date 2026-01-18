@@ -1,7 +1,0 @@
-{
-  "n_datasets": 100,
-  "models_per_dataset": 50,
-  "epochs": 100,
-  "initialization": "near_zero",
-  "started": "2026-01-17T20:25:58.344252"
-}
