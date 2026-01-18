@@ -1,0 +1,79 @@
+{
+  "methodology": "Universal Weight Subspace (Kaushik et al. 2024)",
+  "n_datasets": 10,
+  "n_models": 500,
+  "n_params": 465,
+  "k_values": {
+    "0.5": 61,
+    "0.8": 150,
+    "0.9": 209,
+    "0.95": 260,
+    "0.99": 348
+  },
+  "effective_rank": 302.4834289550781,
+  "compression_ratio": 0.9249497742326895,
+  "mean_reconstruction_error": 25.727535247802734,
+  "accuracy_results": [
+    {
+      "dataset": "synthetic_easy_1",
+      "original_acc": 52.8,
+      "reconstructed_acc": 52.2,
+      "accuracy_drop": 0.5999999999999943
+    },
+    {
+      "dataset": "synthetic_easy_2",
+      "original_acc": 56.4,
+      "reconstructed_acc": 55.4,
+      "accuracy_drop": 1.0
+    },
+    {
+      "dataset": "synthetic_easy_3",
+      "original_acc": 53.3,
+      "reconstructed_acc": 51.9,
+      "accuracy_drop": 1.3999999999999986
+    },
+    {
+      "dataset": "synthetic_easy_4",
+      "original_acc": 50.7,
+      "reconstructed_acc": 50.2,
+      "accuracy_drop": 0.5
+    },
+    {
+      "dataset": "synthetic_easy_5",
+      "original_acc": 49.4,
+      "reconstructed_acc": 50.8,
+      "accuracy_drop": -1.3999999999999986
+    },
+    {
+      "dataset": "synthetic_easy_6",
+      "original_acc": 52.9,
+      "reconstructed_acc": 54.2,
+      "accuracy_drop": -1.3000000000000043
+    },
+    {
+      "dataset": "synthetic_easy_7",
+      "original_acc": 57.8,
+      "reconstructed_acc": 58.6,
+      "accuracy_drop": -0.8000000000000043
+    },
+    {
+      "dataset": "synthetic_easy_8",
+      "original_acc": 53.1,
+      "reconstructed_acc": 52.6,
+      "accuracy_drop": 0.5
+    },
+    {
+      "dataset": "random_labels_1",
+      "original_acc": 56.0,
+      "reconstructed_acc": 54.0,
+      "accuracy_drop": 2.0
+    },
+    {
+      "dataset": "random_labels_2",
+      "original_acc": 49.3,
+      "reconstructed_acc": 50.1,
+      "accuracy_drop": -0.8000000000000043
+    }
+  ],
+  "timestamp": "2026-01-17T21:09:40.751644"
+}

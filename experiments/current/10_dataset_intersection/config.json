@@ -1,0 +1,22 @@
+{
+  "n_datasets": 10,
+  "datasets": [
+    "synthetic_easy_1",
+    "synthetic_easy_2",
+    "synthetic_easy_3",
+    "synthetic_easy_4",
+    "synthetic_easy_5",
+    "synthetic_easy_6",
+    "synthetic_easy_7",
+    "synthetic_easy_8",
+    "random_labels_1",
+    "random_labels_2"
+  ],
+  "models_per_dataset": 50,
+  "epochs": 100,
+  "architecture": [
+    16,
+    16
+  ],
+  "started": "2026-01-17T20:38:53.835345"
+}

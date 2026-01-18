@@ -1,0 +1,167 @@
+{
+  "config": {
+    "n_datasets": 10,
+    "datasets": [
+      "synthetic_easy_1",
+      "synthetic_easy_2",
+      "synthetic_easy_3",
+      "synthetic_easy_4",
+      "synthetic_easy_5",
+      "synthetic_easy_6",
+      "synthetic_easy_7",
+      "synthetic_easy_8",
+      "random_labels_1",
+      "random_labels_2"
+    ],
+    "models_per_dataset": 50,
+    "epochs": 100,
+    "architecture": [
+      16,
+      16
+    ],
+    "started": "2026-01-17T20:38:53.835345"
+  },
+  "individual_dimensions": {
+    "mean": 41.470411682128905,
+    "std": 0.9568738825120086,
+    "min": 40.6154670715332,
+    "max": 43.58018493652344,
+    "all": [
+      40.799720764160156,
+      40.95110321044922,
+      40.6154670715332,
+      41.048797607421875,
+      40.966712951660156,
+      41.28909683227539,
+      40.86854553222656,
+      41.558387756347656,
+      43.026100158691406,
+      43.58018493652344
+    ]
+  },
+  "accuracies": {
+    "mean": 88.023,
+    "min": 53.39,
+    "max": 96.34
+  },
+  "intersection_methods": {
+    "pca_ratio": {
+      "global_dim": 167.65260314941406,
+      "mean_individual": 44.2,
+      "ratio": 3.79304532012249,
+      "intersection_dim": 0,
+      "conclusion": "Nearly orthogonal (no intersection)"
+    },
+    "subspace_intersection": {
+      "intersection_dim": 0.0,
+      "rank_sum_first_two": 88.0,
+      "pairwise_min": 0.0,
+      "pairwise_mean": 0.0
+    },
+    "clustering": {
+      "intersection_dim": 0,
+      "mean_similarity": 0.042390141636133194,
+      "max_similarity": 0.2984877824783325,
+      "highly_aligned_pairs": 0
+    },
+    "mle": {
+      "global_dim": 91.99553650078177,
+      "mean_individual": 38.38052300969291,
+      "individual_dims": [
+        36.69881775766321,
+        35.45883800358092,
+        37.71506503982147,
+        35.8664390220066,
+        34.68503704699539,
+        36.0638255235377,
+        37.392547212369024,
+        36.34951792518022,
+        45.46012145122368,
+        48.1150211145508
+      ]
+    }
+  },
+  "dataset_metadata": [
+    {
+      "dataset_idx": 0,
+      "dataset_name": "synthetic_easy_1",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 40.799720764160156,
+      "mean_accuracy": 96.34
+    },
+    {
+      "dataset_idx": 1,
+      "dataset_name": "synthetic_easy_2",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 40.95110321044922,
+      "mean_accuracy": 96.2
+    },
+    {
+      "dataset_idx": 2,
+      "dataset_name": "synthetic_easy_3",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 40.6154670715332,
+      "mean_accuracy": 96.15
+    },
+    {
+      "dataset_idx": 3,
+      "dataset_name": "synthetic_easy_4",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 41.048797607421875,
+      "mean_accuracy": 96.16
+    },
+    {
+      "dataset_idx": 4,
+      "dataset_name": "synthetic_easy_5",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 40.966712951660156,
+      "mean_accuracy": 96.25
+    },
+    {
+      "dataset_idx": 5,
+      "dataset_name": "synthetic_easy_6",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 41.28909683227539,
+      "mean_accuracy": 96.17
+    },
+    {
+      "dataset_idx": 6,
+      "dataset_name": "synthetic_easy_7",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 40.86854553222656,
+      "mean_accuracy": 96.29
+    },
+    {
+      "dataset_idx": 7,
+      "dataset_name": "synthetic_easy_8",
+      "base_task": "binary_classification_synthetic",
+      "dim_95": 44,
+      "effective_dim": 41.558387756347656,
+      "mean_accuracy": 96.21
+    },
+    {
+      "dataset_idx": 8,
+      "dataset_name": "random_labels_1",
+      "base_task": "binary_random_labels",
+      "dim_95": 45,
+      "effective_dim": 43.026100158691406,
+      "mean_accuracy": 57.07
+    },
+    {
+      "dataset_idx": 9,
+      "dataset_name": "random_labels_2",
+      "base_task": "binary_random_labels",
+      "dim_95": 45,
+      "effective_dim": 43.58018493652344,
+      "mean_accuracy": 53.39
+    }
+  ],
+  "completed": "2026-01-17T20:44:14.985742"
+}

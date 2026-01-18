@@ -276,8 +276,8 @@ def main():
         print(f'  Effective dimension: {effective_dim:.1f}D')
 
         task_dimensions[task] = {
-            'dim_95': dim_95,
-            'dim_99': dim_99,
+            'dim_95': int(dim_95),
+            'dim_99': int(dim_99),
             'effective_dim': float(effective_dim),
             'pca_components': pca.components_[:min(100, dim_95)].tolist(),
             'variance_ratios': var_ratios[:100].tolist()

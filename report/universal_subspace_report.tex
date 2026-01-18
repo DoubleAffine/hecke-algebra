@@ -1,0 +1,399 @@
+\documentclass[11pt,a4paper]{article}
+
+% Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+
+\geometry{margin=1in}
+
+% Colors
+\definecolor{findingblue}{RGB}{31, 119, 180}
+\definecolor{warningred}{RGB}{214, 39, 40}
+\definecolor{successgreen}{RGB}{44, 160, 44}
+
+% Custom boxes
+\newtcolorbox{finding}{
+    colback=blue!5!white,
+    colframe=findingblue,
+    title=Key Finding,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{conclusion}{
+    colback=green!5!white,
+    colframe=successgreen,
+    title=Conclusion,
+    fonttitle=\bfseries
+}
+
+\newtcolorbox{concern}{
+    colback=red!5!white,
+    colframe=warningred,
+    title=Methodological Concern,
+    fonttitle=\bfseries
+}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Critical Analysis of Universal Subspace Hypothesis}
+\lhead{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\title{\textbf{A Critical Examination of the\\Universal Weight Subspace Hypothesis}\\[0.5em]
+\large Replication and Analysis of Claims in arXiv:2512.05117}
+
+\author{Computational Analysis Report}
+\date{January 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present a critical analysis of the ``Universal Weight Subspace Hypothesis'' proposed by Kaushik et al. (arXiv:2512.05117), which claims that neural networks systematically converge to shared spectral subspaces regardless of initialization, task, or domain. Through independent replication experiments on Vision Transformer (ViT) models downloaded from HuggingFace, we find that: (1) apparent low-dimensional structure in weight space is largely explained by shared training methodology rather than universal convergence; (2) models trained with different objectives (supervised vs. self-supervised) occupy nearly orthogonal subspaces despite identical architectures; and (3) the paper's methodology may conflate ``models trained similarly cluster together'' with ``all models converge to a universal subspace.'' Our findings suggest the claimed universality does not hold across genuinely diverse training methods.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+\subsection{The Universal Subspace Hypothesis}
+
+Kaushik et al. (2024) propose the \textbf{Universal Weight Subspace Hypothesis}, claiming that ``neural networks systematically converge to shared spectral subspaces regardless of initialization, task, or domain.'' They support this claim with an empirical study of over 1,100 models:
+
+\begin{itemize}
+    \item 500 Mistral-7B LoRA adapters (fine-tuned language models)
+    \item 500 Vision Transformers from HuggingFace
+    \item 50 LLaMA-8B models
+\end{itemize}
+
+The authors report finding low-dimensional structure in weight space, with a small number of principal components explaining most of the variance across models.
+
+\subsection{Our Investigation}
+
+We set out to replicate the ViT analysis and critically examine the methodology. Our key questions:
+
+\begin{enumerate}
+    \item Are the 500 ViTs truly independent, or do they share training ancestry?
+    \item Does the ``universal subspace'' hold across different training objectives?
+    \item What does the first principal component actually represent?
+\end{enumerate}
+
+%==============================================================================
+\section{Methodological Concerns with the Original Paper}
+%==============================================================================
+
+\subsection{LoRA Results are Trivially Expected}
+
+\begin{concern}
+The 500 Mistral-7B LoRAs all share the \textbf{same base model}. LoRA (Low-Rank Adaptation) is explicitly designed to produce low-rank weight updates (typically rank 8-64). Finding that LoRA adapters lie in a low-dimensional subspace is therefore \textbf{tautological}---it's the defining property of the method, not an emergent phenomenon.
+\end{concern}
+
+\subsection{LLaMA Results Share Common Ancestry}
+
+Similarly, the 50 LLaMA-8B models analyzed all derive from the same base checkpoint. Any ``universal subspace'' found would primarily reflect:
+\begin{itemize}
+    \item The shared pre-trained weights (which dominate)
+    \item Small fine-tuning perturbations
+\end{itemize}
+
+\subsection{ViT Analysis: The Strongest Claim}
+
+The ViT analysis is potentially the strongest evidence, as these models were downloaded from HuggingFace and ostensibly trained by different researchers on different datasets. However, we identified several concerns:
+
+\begin{enumerate}
+    \item Many HuggingFace ViTs are fine-tuned from common checkpoints (e.g., \texttt{google/vit-base-patch16-224})
+    \item Most use supervised cross-entropy training on ImageNet-derived data
+    \item The sample may lack diversity in training \textit{objectives}
+\end{enumerate}
+
+%==============================================================================
+\section{Replication Experiment 1: 20 HuggingFace ViTs}
+%==============================================================================
+
+\subsection{Methodology}
+
+We downloaded 20 ViT-Base models from HuggingFace with matching architectures:
+\begin{itemize}
+    \item Hidden size: 768
+    \item Layers: 12
+    \item Attention heads: 12
+    \item Patch size: 16$\times$16
+    \item Parameters: 85,798,656 (encoder only, excluding classifier)
+\end{itemize}
+
+We extracted the full weight vectors and performed PCA via the Gram matrix trick (computing the 20$\times$20 covariance matrix rather than full SVD on the 85M-dimensional space).
+
+\subsection{Results}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/variance_explained_20vit.pdf}
+    \caption{Variance explained by principal components for 20 HuggingFace ViT models. PC1 captures 77\% of variance, suggesting apparent low-dimensional structure. However, $k_{95} = 14$ out of 20 models (70\%).}
+    \label{fig:variance_20vit}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Number of models & 20 \\
+Parameters per model & 85,798,656 \\
+$k_{50}$ (PCs for 50\% variance) & 1 \\
+$k_{90}$ (PCs for 90\% variance) & 10 \\
+$k_{95}$ (PCs for 95\% variance) & 14 \\
+$k_{99}$ (PCs for 99\% variance) & 17 \\
+Effective dimension & 1.68 \\
+Spectral ratio $\sigma_1/\sigma_{10}$ & 7.46 \\
+\bottomrule
+\end{tabular}
+\caption{Summary statistics for PCA of 20 HuggingFace ViT models.}
+\label{tab:20vit_stats}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/spectral_decay.pdf}
+    \caption{Spectral decay analysis. Left: singular values on log scale. Right: normalized singular values showing rapid decay after PC1.}
+    \label{fig:spectral_decay}
+\end{figure}
+
+\subsection{Initial Interpretation}
+
+At first glance, these results appear to support the universal subspace hypothesis:
+\begin{itemize}
+    \item PC1 alone captures 77\% of variance
+    \item Effective dimension is only 1.68
+    \item Sharp spectral decay ($\sigma_1/\sigma_{10} = 7.46$)
+\end{itemize}
+
+\begin{finding}
+However, upon examining the models, we found most were fine-tuned variants of the same base checkpoints or trained with the same supervised objective on ImageNet. The ``universal subspace'' may simply be the ``ImageNet supervised training'' subspace.
+\end{finding}
+
+%==============================================================================
+\section{Replication Experiment 2: Diverse Training Objectives}
+%==============================================================================
+
+\subsection{Motivation}
+
+To test whether the universal subspace holds across genuinely different training methods, we selected 6 ViT-Base models with \textbf{identical architectures} but \textbf{different training objectives}:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Model} & \textbf{Training Method} & \textbf{Data} \\
+\midrule
+google/vit-base-patch16-224 & Supervised & ImageNet \\
+google/vit-base-patch16-224-in21k & Supervised & ImageNet-21k \\
+timm/vit\_base\_patch16\_224.dino & DINO (self-supervised) & ImageNet \\
+timm/vit\_base\_patch16\_224.mae & MAE (masked autoencoder) & ImageNet \\
+timm/vit\_base\_patch16\_clip\_224.openai & CLIP (contrastive) & 400M image-text pairs \\
+timm/vit\_base\_patch16\_clip\_224.laion2b & CLIP (contrastive) & LAION-2B \\
+\bottomrule
+\end{tabular}
+\caption{Six ViT models with identical architecture but different training objectives.}
+\label{tab:6models}
+\end{table}
+
+We verified all models have \textbf{identical architecture}:
+\begin{itemize}
+    \item Same config parameters (hidden size, layers, heads, etc.)
+    \item Same parameter names
+    \item Same parameter shapes
+    \item Same total parameter count: 85,798,656
+\end{itemize}
+
+\subsection{Training Objective Differences}
+
+\textbf{Supervised:} Trained with cross-entropy loss to predict ImageNet class labels.
+
+\textbf{DINO:} Self-supervised learning via self-distillation. No labels used---the model learns by making representations of augmented views consistent.
+
+\textbf{MAE:} Masked Autoencoder. Self-supervised learning by reconstructing randomly masked image patches. No labels used.
+
+\textbf{CLIP:} Contrastive Language-Image Pre-training. Learns to match images with text captions from web-scraped data.
+
+\subsection{Results: PC1 Separates Training Objectives}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/variance_by_training_method.pdf}
+    \caption{Variance explained by principal components for 6 ViT models with different training methods. PC1 captures 88.6\% of variance---but this represents the \textbf{supervised vs. self-supervised distinction}, not a universal attractor.}
+    \label{fig:variance_6models}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/pc1_projections.pdf}
+    \caption{Projections of the 6 models onto PC1. Clear separation into two clusters: supervised models (negative) and self-supervised/CLIP models (positive).}
+    \label{fig:pc1_projections}
+\end{figure}
+
+\begin{finding}
+PC1 does not represent a ``universal'' direction that all models converge to. Instead, it captures the \textbf{fundamental difference between training objectives}. Supervised and self-supervised models occupy opposite ends of PC1.
+\end{finding}
+
+\subsection{Cosine Similarity Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/cosine_similarity_heatmap.pdf}
+    \caption{Pairwise cosine similarity between the 6 ViT models. Red box: supervised models are nearly identical ($\cos\theta \approx 0.999$). Blue box: self-supervised models are moderately similar to each other ($\cos\theta \approx 0.36$). Cross-method similarity is near zero ($\cos\theta \approx 0.05$).}
+    \label{fig:cosine_heatmap}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Comparison} & \textbf{Cosine Similarity} & \textbf{Interpretation} \\
+\midrule
+Supervised vs. Supervised & 0.999 & Nearly identical \\
+DINO vs. MAE vs. CLIP & $\sim$0.36 & Moderately similar \\
+Supervised vs. Self-supervised & $\sim$0.05 & \textbf{Nearly orthogonal} \\
+\bottomrule
+\end{tabular}
+\caption{Summary of cosine similarities between model groups.}
+\label{tab:cosine_summary}
+\end{table}
+
+\begin{concern}
+Models with different training objectives are \textbf{nearly orthogonal} in weight space (cosine similarity $\approx 0.05$), despite having identical architectures and learning from natural images. This directly contradicts the claim that models converge to a shared subspace ``regardless of task.''
+\end{concern}
+
+\subsection{Layer Contribution Analysis}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/layer_contributions.pdf}
+    \caption{Contribution of each layer to PC1. Later layers (8--11) contribute most, suggesting PC1 captures task-specific representations rather than universal low-level features.}
+    \label{fig:layer_contributions}
+\end{figure}
+
+The fact that later layers contribute most to PC1 is consistent with our interpretation: PC1 represents the difference in high-level, task-specific representations between training objectives, not a universal feature of neural network learning.
+
+%==============================================================================
+\section{Summary of Findings}
+%==============================================================================
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/pc1_schematic.pdf}
+    \caption{Schematic representation of our findings. PC1 separates models by training objective. Supervised and self-supervised models are nearly orthogonal despite identical architecture.}
+    \label{fig:schematic}
+\end{figure}
+
+\subsection{What We Found}
+
+\begin{enumerate}
+    \item \textbf{Apparent low-dimensional structure exists} when analyzing models from HuggingFace (PC1 explains 77--89\% of variance).
+
+    \item \textbf{This structure reflects training methodology}, not universal convergence. Models cluster by training objective.
+
+    \item \textbf{Different training objectives produce nearly orthogonal solutions} (cosine similarity $\approx 0.05$) despite:
+    \begin{itemize}
+        \item Identical architecture (same weight space)
+        \item Same data domain (natural images)
+        \item Same optimization algorithm (gradient descent)
+    \end{itemize}
+
+    \item \textbf{The paper's ViT sample likely lacked diversity} in training objectives, leading to an apparent ``universal'' subspace that is actually the supervised ImageNet training subspace.
+\end{enumerate}
+
+\subsection{Reconciliation with the Original Paper}
+
+The paper's claim---``neural networks systematically converge to shared spectral subspaces regardless of initialization, task, or domain''---may be too strong. Our results suggest:
+
+\begin{itemize}
+    \item \textbf{Within} a training methodology (e.g., all supervised ImageNet models), there may be a shared subspace.
+    \item \textbf{Across} different training objectives, this universality breaks down.
+\end{itemize}
+
+The paper may have inadvertently sampled models that predominantly share the same training methodology, leading to a ``universal'' finding that doesn't generalize.
+
+%==============================================================================
+\section{Conclusions}
+%==============================================================================
+
+\begin{conclusion}
+\begin{enumerate}
+    \item The ``Universal Weight Subspace Hypothesis'' is not supported when testing across genuinely diverse training objectives.
+
+    \item Models trained with supervised vs. self-supervised objectives occupy \textbf{nearly orthogonal} subspaces despite identical architectures.
+
+    \item The original paper's findings may reflect shared training ancestry (LoRA from same base model, ViTs fine-tuned from common checkpoints) rather than a fundamental property of neural network optimization.
+
+    \item Different loss functions create different loss landscapes, naturally leading to different solutions. This is expected behavior, not evidence against gradient-based learning.
+
+    \item Future work claiming ``universal'' properties of neural networks should ensure genuine diversity in:
+    \begin{itemize}
+        \item Random initialization
+        \item Training objectives/loss functions
+        \item Training data
+        \item Model provenance (not fine-tuned from shared checkpoints)
+    \end{itemize}
+\end{enumerate}
+\end{conclusion}
+
+%==============================================================================
+\section{Data and Reproducibility}
+%==============================================================================
+
+\subsection{Models Analyzed}
+
+All models were downloaded from HuggingFace using the \texttt{transformers} library:
+
+\begin{verbatim}
+from transformers import ViTForImageClassification
+model = ViTForImageClassification.from_pretrained(model_name)
+\end{verbatim}
+
+\subsection{Key Numerical Results}
+
+\textbf{20 HuggingFace ViTs:}
+\begin{itemize}
+    \item Variance in PC1: 77.0\%
+    \item $k_{95}$: 14/20 (70\%)
+    \item Effective dimension: 1.68
+    \item Spectral ratio: 7.46
+\end{itemize}
+
+\textbf{6 Models with Diverse Training:}
+\begin{itemize}
+    \item Variance in PC1: 88.6\%
+    \item Supervised vs. Supervised cosine: 0.999
+    \item Self-supervised inter-method cosine: $\sim$0.36
+    \item Supervised vs. Self-supervised cosine: $\sim$0.05
+\end{itemize}
+
+\subsection{Code Availability}
+
+All analysis code is available in the accompanying repository:
+\begin{itemize}
+    \item \texttt{replicate\_vit\_analysis\_v4.py}: Main replication script
+    \item \texttt{analyze\_vit\_pc1.py}: PC1 analysis with diverse training methods
+    \item \texttt{check\_vit\_architectures.py}: Architecture verification
+    \item \texttt{report/generate\_figures.py}: Figure generation
+\end{itemize}
+
+\end{document}

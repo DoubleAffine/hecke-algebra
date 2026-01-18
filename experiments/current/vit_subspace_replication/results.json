@@ -1,0 +1,137 @@
+{
+  "n_models": 20,
+  "n_params": 85798656,
+  "k_50": 1,
+  "k_90": 10,
+  "k_95": 14,
+  "k_99": 17,
+  "effective_dim": 1.6773873704639233,
+  "spectral_ratio_10": 7.458060372016006,
+  "top_20_variance": [
+    0.7699366179315442,
+    0.022105143976871584,
+    0.013862449490027982,
+    0.013849997243002145,
+    0.01384897438264899,
+    0.013846840875185564,
+    0.013846064286606553,
+    0.01384494571693445,
+    0.01384383340781755,
+    0.013842138356328497,
+    0.013840796056661797,
+    0.01383884701528312,
+    0.013836976448725091,
+    0.013836182658531558,
+    0.013833560908429068,
+    0.013831355918134728,
+    0.013829791261015974,
+    0.00029731429481470126,
+    2.0960391271739817e-05,
+    7.209380164579877e-06
+  ],
+  "singular_values": [
+    1381.0976503421412,
+    234.014933695376,
+    185.3176939314436,
+    185.23444240524358,
+    185.2276022426724,
+    185.2133340491538,
+    185.20814020826376,
+    185.20065893457388,
+    185.1932192333534,
+    185.1818812736177,
+    185.1729023284043,
+    185.15986397591496,
+    185.14734972693802,
+    185.14203894755755,
+    185.12449729002176,
+    185.10974281032338,
+    185.09927234487773,
+    27.139684467644596,
+    7.206038723995959,
+    4.22615929334664
+  ],
+  "models": [
+    {
+      "name": "google/vit-base-patch16-224",
+      "n_params": 85798656
+    },
+    {
+      "name": "google/vit-base-patch16-224-in21k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.augreg2_in21k_ft_in1k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.augreg_in21k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.dino",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_clip_224.openai",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.orig_in21k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_clip_224.laion400m_e32",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.mae",
+      "n_params": 85798656
+    },
+    {
+      "name": "michel-ducartier/BiomedCLIP-PubMedBERT_256-vit_base_patch16_224",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.augreg_in21k_ft_in1k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_siglip_224.v2_webli",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_clip_224.laion2b_ft_in12k_in1k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_clip_224.laion2b",
+      "n_params": 85798656
+    },
+    {
+      "name": "aaraki/vit-base-patch16-224-in21k-finetuned-cifar10",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_siglip_gap_224.v2_webli",
+      "n_params": 85798656
+    },
+    {
+      "name": "harrytechiz/vit-base-patch16-224-blur_vs_clean",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.orig_in21k_ft_in1k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_base_patch16_224.augreg_in1k",
+      "n_params": 85798656
+    },
+    {
+      "name": "timm/vit_relpos_base_patch16_224.sw_in1k",
+      "n_params": 85798656
+    }
+  ],
+  "timestamp": "2026-01-18T17:39:15.842552"
+}
